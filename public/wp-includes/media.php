@@ -284,9 +284,8 @@ function wp_constrain_dimensions( $current_width, $current_height, $max_width=0,
 		// The larger ratio fits, and is likely to be a more "snug" fit.
 		$ratio = $larger_ratio;
 
-	// Very small dimensions may result in 0, 1 should be the minimum.
-	$w = max ( 1, intval( $current_width  * $ratio ) );
-	$h = max ( 1, intval( $current_height * $ratio ) );
+	$w = intval( $current_width  * $ratio );
+	$h = intval( $current_height * $ratio );
 
 	// Sometimes, due to rounding, we'll end up with a result like this: 465x700 in a 177x177 box is 117x176... a pixel short
 	// We also have issues with recursive calls resulting in an ever-changing result. Constraining to the result of a constraint should yield the original result.
@@ -641,49 +640,20 @@ function img_caption_shortcode($attr, $content = null) {
 	if ( $output != '' )
 		return $output;
 
-	$atts = shortcode_atts( array(
-		'id'	  => '',
-		'align'	  => 'alignnone',
-		'width'	  => '',
+	extract(shortcode_atts(array(
+		'id'	=> '',
+		'align'	=> 'alignnone',
+		'width'	=> '',
 		'caption' => ''
-	), $attr, 'caption' );
+	), $attr, 'caption'));
 
-	$atts['width'] = (int) $atts['width'];
-	if ( $atts['width'] < 1 || empty( $atts['caption'] ) )
+	if ( 1 > (int) $width || empty($caption) )
 		return $content;
 
-	if ( ! empty( $atts['id'] ) )
-		$atts['id'] = 'id="' . esc_attr( $atts['id'] ) . '" ';
+	if ( $id ) $id = 'id="' . esc_attr($id) . '" ';
 
-	$caption_width = 10 + $atts['width'];
-
-	/**
-	 * Filter the width of an image's caption.
-	 *
-	 * By default, the caption is 10 pixels greater than the width of the image,
-	 * to prevent post content from running up against a floated image.
-	 *
-	 * @since 3.7.0
-	 *
-	 * @param int $caption_width Width in pixels. To remove this inline style, return zero.
-	 * @param array $atts {
-	 *     The attributes of the caption shortcode.
-	 *
-	 *     @type string 'id'      The ID of the div element for the caption.
-	 *     @type string 'align'   The class name that aligns the caption. Default 'alignnone'.
-	 *     @type int    'width'   The width of the image being captioned.
-	 *     @type string 'caption' The image's caption.
-	 * }
-	 * @param string $content The image element, possibly wrapped in a hyperlink.
-	 */
-	$caption_width = apply_filters( 'img_caption_shortcode_width', $caption_width, $atts, $content );
-
-	$style = '';
-	if ( $caption_width )
-		$style = 'style="width: ' . (int) $caption_width . 'px" ';
-
-	return '<div ' . $atts['id'] . $style . 'class="wp-caption ' . esc_attr( $atts['align'] ) . '">'
-	. do_shortcode( $content ) . '<p class="wp-caption-text">' . $atts['caption'] . '</p></div>';
+	return '<div ' . $id . 'class="wp-caption ' . esc_attr($align) . '" style="width: ' . (10 + (int) $width) . 'px">'
+	. do_shortcode( $content ) . '<p class="wp-caption-text">' . $caption . '</p></div>';
 }
 
 add_shortcode('gallery', 'gallery_shortcode');
@@ -734,8 +704,7 @@ function gallery_shortcode($attr) {
 		'columns'    => 3,
 		'size'       => 'thumbnail',
 		'include'    => '',
-		'exclude'    => '',
-		'link'       => ''
+		'exclude'    => ''
 	), $attr, 'gallery'));
 
 	$id = intval($id);
@@ -809,9 +778,9 @@ function gallery_shortcode($attr) {
 
 	$i = 0;
 	foreach ( $attachments as $id => $attachment ) {
-		if ( ! empty( $link ) && 'file' === $link )
+		if ( ! empty( $attr['link'] ) && 'file' === $attr['link'] )
 			$image_output = wp_get_attachment_link( $id, $size, false, false );
-		elseif ( ! empty( $link ) && 'none' === $link )
+		elseif ( ! empty( $attr['link'] ) && 'none' === $attr['link'] )
 			$image_output = wp_get_attachment_image( $id, $size, false );
 		else
 			$image_output = wp_get_attachment_link( $id, $size, true, false );
@@ -875,29 +844,14 @@ function wp_get_audio_extensions() {
  *
  * @since 3.6.0
  *
- * @param array  $attr    Attributes of the shortcode.
- * @param string $content Optional. Shortcode content.
+ * @param array $attr Attributes of the shortcode.
  * @return string HTML content to display audio.
  */
-function wp_audio_shortcode( $attr, $content = '' ) {
+function wp_audio_shortcode( $attr ) {
 	$post_id = get_post() ? get_the_ID() : 0;
 
 	static $instances = 0;
 	$instances++;
-
-	/**
-	 * Override the default audio shortcode.
-	 *
-	 * @since 3.7.0
-	 *
-	 * @param null              Empty variable to be replaced with shortcode markup.
-	 * @param array  $attr      Attributes of the shortcode.
-	 * @param string $content   Shortcode content.
-	 * @param int    $instances Unique numeric ID of this audio shortcode instance.
-	 */
-	$html = apply_filters( 'wp_audio_shortcode_override', '', $attr, $content, $instances );
-	if ( '' !== $html )
-		return $html;
 
 	$audio = null;
 
@@ -917,7 +871,7 @@ function wp_audio_shortcode( $attr, $content = '' ) {
 	$primary = false;
 	if ( ! empty( $src ) ) {
 		$type = wp_check_filetype( $src, wp_get_mime_types() );
-		if ( ! in_array( strtolower( $type['ext'] ), $default_types ) )
+		if ( ! in_array( $type['ext'], $default_types ) )
 			return sprintf( '<a class="wp-embedded-audio" href="%s">%s</a>', esc_url( $src ), esc_html( $src ) );
 		$primary = true;
 		array_unshift( $default_types, 'src' );
@@ -925,7 +879,7 @@ function wp_audio_shortcode( $attr, $content = '' ) {
 		foreach ( $default_types as $ext ) {
 			if ( ! empty( $$ext ) ) {
 				$type = wp_check_filetype( $$ext, wp_get_mime_types() );
-				if ( strtolower( $type['ext'] ) === $ext )
+				if ( $type['ext'] === $ext )
 					$primary = true;
 			}
 		}
@@ -992,7 +946,7 @@ function wp_audio_shortcode( $attr, $content = '' ) {
 
 	return apply_filters( 'wp_audio_shortcode', $html, $atts, $audio, $post_id, $library );
 }
-add_shortcode( 'audio', 'wp_audio_shortcode' );
+add_shortcode( 'audio', apply_filters( 'wp_audio_shortcode_handler', 'wp_audio_shortcode' ) );
 
 /**
  * Return a filtered list of WP-supported video formats
@@ -1012,30 +966,15 @@ function wp_get_video_extensions() {
  *
  * @since 3.6.0
  *
- * @param array  $attr    Attributes of the shortcode.
- * @param string $content Optional. Shortcode content.
+ * @param array $attr Attributes of the shortcode.
  * @return string HTML content to display video.
  */
-function wp_video_shortcode( $attr, $content = '' ) {
+function wp_video_shortcode( $attr ) {
 	global $content_width;
 	$post_id = get_post() ? get_the_ID() : 0;
 
 	static $instances = 0;
 	$instances++;
-
-	/**
-	 * Override the default video shortcode.
-	 *
-	 * @since 3.7.0
-	 *
-	 * @param null              Empty variable to be replaced with shortcode markup.
-	 * @param array  $attr      Attributes of the shortcode.
-	 * @param string $content   Shortcode content.
-	 * @param int    $instances Unique numeric ID of this video shortcode instance.
-	 */
-	$html = apply_filters( 'wp_video_shortcode_override', '', $attr, $content, $instances );
-	if ( '' !== $html )
-		return $html;
 
 	$video = null;
 
@@ -1071,7 +1010,7 @@ function wp_video_shortcode( $attr, $content = '' ) {
 	$primary = false;
 	if ( ! empty( $src ) ) {
 		$type = wp_check_filetype( $src, wp_get_mime_types() );
-		if ( ! in_array( strtolower( $type['ext'] ), $default_types ) )
+		if ( ! in_array( $type['ext'], $default_types ) )
 			return sprintf( '<a class="wp-embedded-video" href="%s">%s</a>', esc_url( $src ), esc_html( $src ) );
 		$primary = true;
 		array_unshift( $default_types, 'src' );
@@ -1079,7 +1018,7 @@ function wp_video_shortcode( $attr, $content = '' ) {
 		foreach ( $default_types as $ext ) {
 			if ( ! empty( $$ext ) ) {
 				$type = wp_check_filetype( $$ext, wp_get_mime_types() );
-				if ( strtolower( $type['ext'] ) === $ext )
+				if ( $type['ext'] === $ext )
 					$primary = true;
 			}
 		}
@@ -1148,10 +1087,10 @@ function wp_video_shortcode( $attr, $content = '' ) {
 		$html .= wp_mediaelement_fallback( $fileurl );
 	$html .= '</video>';
 
-	$html = sprintf( '<div style="width: %dpx; max-width: 100%%;" class="wp-video">%s</div>', $width, $html );
+	$html = sprintf( '<div style="width: %dpx; max-width: 100%%;">%s</div>', $width, $html );
 	return apply_filters( 'wp_video_shortcode', $html, $atts, $video, $post_id, $library );
 }
-add_shortcode( 'video', 'wp_video_shortcode' );
+add_shortcode( 'video', apply_filters( 'wp_video_shortcode_handler', 'wp_video_shortcode' ) );
 
 /**
  * Display previous image link that has the same post parent.
@@ -1744,7 +1683,6 @@ function wp_prepare_attachment_for_js( $attachment ) {
 
 	if ( $meta && 'image' === $type ) {
 		$sizes = array();
-		/** This filter is documented in wp-admin/includes/media.php */
 		$possible_sizes = apply_filters( 'image_size_names_choose', array(
 			'thumbnail' => __('Thumbnail'),
 			'medium'    => __('Medium'),
@@ -1942,7 +1880,6 @@ function wp_enqueue_media( $args = array() ) {
 	require_once ABSPATH . WPINC . '/media-template.php';
 	add_action( 'admin_footer', 'wp_print_media_templates' );
 	add_action( 'wp_footer', 'wp_print_media_templates' );
-	add_action( 'customize_controls_print_footer_scripts', 'wp_print_media_templates' );
 
 	do_action( 'wp_enqueue_media' );
 }

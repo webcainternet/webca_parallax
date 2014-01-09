@@ -1139,15 +1139,7 @@ class wpdb {
 		$client_flags = defined( 'MYSQL_CLIENT_FLAGS' ) ? MYSQL_CLIENT_FLAGS : 0;
 
 		if ( WP_DEBUG ) {
-			$error_reporting = false;
-			if ( defined( 'E_DEPRECATED' ) ) {
-				$error_reporting = error_reporting();
-				error_reporting( $error_reporting ^ E_DEPRECATED );
-			}
 			$this->dbh = mysql_connect( $this->dbhost, $this->dbuser, $this->dbpassword, $new_link, $client_flags );
-			if ( false !== $error_reporting ) {
-				error_reporting( $error_reporting );
-			}
 		} else {
 			$this->dbh = @mysql_connect( $this->dbhost, $this->dbuser, $this->dbpassword, $new_link, $client_flags );
 		}
@@ -1188,14 +1180,8 @@ class wpdb {
 	function query( $query ) {
 		if ( ! $this->ready )
 			return false;
-		/**
-		 * Filter the database query.
-		 *
-		 * Some queries are made before the plugins have been loaded, and thus cannot be filtered with this method.
-		 *
-		 * @since 2.1.0
-		 * @param string $query Database query.
-		 */
+
+		// some queries are made before the plugins have been loaded, and thus cannot be filtered with this method
 		$query = apply_filters( 'query', $query );
 
 		$return_val = 0;

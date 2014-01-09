@@ -1,5 +1,3 @@
-/* global getUserSetting, tinymce, QTags, wpActiveEditor */
-
 // WordPress, TinyMCE, and Media
 // -----------------------------
 (function($){
@@ -238,9 +236,6 @@
 				args.perPage = -1;
 
 				// Mark the `orderby` override attribute.
-				if( undefined !== attrs.orderby )
-					attrs._orderByField = attrs.orderby;
-
 				if ( 'rand' === attrs.orderby )
 					attrs._orderbyRandom = true;
 
@@ -288,15 +283,9 @@
 					attrs.id = props.uploadedTo;
 
 				// Check if the gallery is randomly ordered.
-				delete attrs.orderby;
-
 				if ( attrs._orderbyRandom )
 					attrs.orderby = 'rand';
-				else if ( attrs._orderByField && attrs._orderByField != 'rand' )
-					attrs.orderby = attrs._orderByField;
-
 				delete attrs._orderbyRandom;
-				delete attrs._orderByField;
 
 				// If the `ids` attribute is set and `orderby` attribute
 				// is the default value, clear it for cleaner output.
@@ -526,7 +515,7 @@
 					var display = state.display( attachment ).toJSON();
 					return this.send.attachment( display, attachment.toJSON() );
 				}, this ) ).done( function() {
-					wp.media.editor.insert( _.toArray( arguments ).join('\n\n') );
+					wp.media.editor.insert( _.toArray( arguments ).join("\n\n") );
 				});
 			}, this );
 
